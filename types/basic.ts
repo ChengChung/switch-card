@@ -5,6 +5,7 @@ export interface Response<T> {
 }
 
 export interface Config {
+  user_id: string
   nickname: string
   custom_avatar_url: string
   nintendo_avatar_url: string

@@ -3,6 +3,7 @@ import { createKysely } from '@vercel/postgres-kysely'
 import type { AccessTokenRes, Config, Database, PlayHistories } from '~/types'
 import { CLIENT_ID, GRANT_TYPE, UA } from '~/utils/constance'
 import { renderCard } from '~/server/core/renderCard'
+import { getCardCache } from '~/server/core/imgCache'
 
 const IS_DEV = env.NODE_ENV === 'development'
 
@@ -14,7 +15,10 @@ export default defineEventHandler(async (event) => {
     const splits = params.split('/')
     const userId = splits[0]
 
-    // TODO: if we found a updated cache, we should return it
+    const cache_svg = await getCardCache(userId)
+    if (cache_svg) {
+      return cache_svg
+    }
 
     const db = createKysely<Database>()
     const findUser = await db.selectFrom('switch_card_user')
@@ -42,6 +46,7 @@ export default defineEventHandler(async (event) => {
     })
 
     const configs: Config = {
+      user_id: userId,
       nickname,
       custom_avatar_url: findUser.custom_avatar_url ?? '',
       nintendo_avatar_url: findUser.nintendo_avatar_url,

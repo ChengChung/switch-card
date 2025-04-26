@@ -1,4 +1,5 @@
 import { createKysely } from '@vercel/postgres-kysely'
+import dayjs from 'dayjs'
 import type { Database, Response, UserCustomInfo } from '~/types'
 
 export async function getOrCreateImageCache(titles: GameTitle[]): Promise<Map<string, string>> {
@@ -53,4 +54,51 @@ export function getUnresizedImageUrl(url: string) {
     return url.slice(0, -4)
   else
     return url
+}
+
+export async function saveCardCache(userId: string, cache: string) {
+  try {
+    const db = createKysely<Database>()
+    await db.insertInto('switch_card_cache')
+      .values({
+        user_id: userId,
+        cache,
+        updated_time: new Date(),
+      })
+      .onConflict(oc => oc
+        .columns(['user_id'])
+        .doUpdateSet(eb => ({
+          cache: eb.ref('excluded.cache'),
+          updated_time: eb.ref('excluded.updated_time'),
+        })))
+      .execute()
+  }
+  catch (error) {
+    console.error('saveCardCache error:', error)
+  }
+}
+
+export async function getCardCache(userId: string): Promise<string | null> {
+  try {
+    const db = createKysely<Database>()
+    const cache = await db.selectFrom('switch_card_cache')
+      .where('user_id', '=', userId)
+      .selectAll()
+      .executeTakeFirst()
+
+    if (cache?.updated_time) {
+      const now = dayjs(new Date())
+      const updated_time = dayjs(cache.updated_time)
+      if (now.isAfter(updated_time.add(2, 'hour'))) {
+        return null
+      }
+      return cache.cache
+    }
+
+    return cache?.cache ?? null
+  }
+  catch (error) {
+    console.error('getCardCache error:', error)
+    return null
+  }
 }

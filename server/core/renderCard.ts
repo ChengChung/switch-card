@@ -1,7 +1,7 @@
 import { env, title } from 'node:process'
 import dayjs from 'dayjs'
 import { getGameScreenshotURL } from './storeGameInfo'
-import { type GameTitle, getOrCreateImageCache, getUnresizedImageUrl } from './imgCache'
+import { type GameTitle, getOrCreateImageCache, getUnresizedImageUrl, saveCardCache } from './imgCache'
 import type { Config, History, PlayHistories } from '~/types'
 import { imageCoverCropping, imageUrl2Base64 } from '~/server/utils'
 import { JPEG_PREFIX, NS_LOGO_BASE64, PNG_PREFIX, SVG_ANIMATION_STYLE, SVG_CARD_FRAME_CSS_STYLE, SVG_PREFIX, test_frame1, test_frame2 } from '~/utils/constance'
@@ -160,7 +160,7 @@ export function renderCard(playData: PlayHistories, config: Config) {
     const frame1 = await renderFrame1()
     const frame2 = await renderFrame2()
 
-    return `
+    const card_svg = `
     <svg width="622" height="206" xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns="http://www.w3.org/2000/svg">
       <style type="text/css">
@@ -174,6 +174,10 @@ export function renderCard(playData: PlayHistories, config: Config) {
       <foreignObject id="frame2" width="622" height="206"> ${frame2} </foreignObject>
     </svg>
     `
+
+    await saveCardCache(config.user_id, card_svg)
+
+    return card_svg
   }
 
   return {
