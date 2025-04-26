@@ -2,6 +2,7 @@ export interface UserInfo {
   id: string
   nickname: string
   country: string
+  iconUri: string
 }
 
 export interface History {
@@ -23,11 +24,8 @@ export interface PlayHistories {
   }[]
 }
 
-export type FormatedRecentData = Record<string, {
-  name: string
-  image: string
-  playedMin: number
-  playedTimeString?: string
-  totalMin?: number
-  totalMinString?: string
-}>
+export interface UserCustomInfo {
+  id: string
+  custom_avatar_url: string
+  sw_friend_code: string
+}

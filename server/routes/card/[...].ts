@@ -1,7 +1,6 @@
 import { env } from 'node:process'
 import { createKysely } from '@vercel/postgres-kysely'
-import { getConfig } from '~/server/core/getConfig'
-import type { AccessTokenRes, Database, PlayHistories } from '~/types'
+import type { AccessTokenRes, Config, Database, PlayHistories } from '~/types'
 import { CLIENT_ID, GRANT_TYPE, UA } from '~/utils/constance'
 import { renderCard } from '~/server/core/renderCard'
 
@@ -12,10 +11,10 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'Content-Type', 'image/svg+xml')
     setHeader(event, 'Cache-Control', `public, max-age=${IS_DEV ? '0' : '86400'}`)
     const { _: params } = event.context.params as { _: string }
-
     const splits = params.split('/')
     const userId = splits[0]
-    const configs = splits[1] || ''
+
+    // TODO: if we found a updated cache, we should return it
 
     const db = createKysely<Database>()
     const findUser = await db.selectFrom('switch_card_user')
@@ -42,11 +41,15 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    // return {
-    //   playData,
-    // }
+    const configs: Config = {
+      nickname,
+      custom_avatar_url: findUser.custom_avatar_url ?? '',
+      nintendo_avatar_url: findUser.nintendo_avatar_url,
+      country: findUser.country,
+      sw_friend_code: findUser.sw_friend_code,
+    }
 
-    const { render } = renderCard(playData, getConfig(configs), nickname)
+    const { render } = renderCard(playData, configs)
     return await render()
   }
   catch (error) {

@@ -15,7 +15,9 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@anu-vue/nuxt": "^0.15.2"
+    "@anu-vue/nuxt": "^0.15.2",
+    "sharp": "^0.34.1",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.4.6",
@@ -30,6 +32,8 @@
     "@nuxtjs/color-mode": "^3.3.2",
     "@pinia-plugin-persistedstate/nuxt": "^1.2.0",
     "@pinia/nuxt": "^0.5.1",
+    "@types/node": "^22.14.1",
+    "@types/xml2js": "^0.4.14",
     "@unocss/eslint-config": "^0.58.0",
     "@unocss/nuxt": "^0.58.0",
     "@vercel/postgres": "^0.5.1",

@@ -1,142 +1,182 @@
-import { env } from 'node:process'
-import type { Config, PlayHistories } from '~/types'
-import { formatRecentGames, imageUrl2Base64 } from '~/server/utils'
-import { JPEG_PREFIX, NS_LOGO_BASE64 } from '~/utils/constance'
-import { formatMin } from '~/utils/tools'
+import { env, title } from 'node:process'
+import dayjs from 'dayjs'
+import { getGameScreenshotURL } from './storeGameInfo'
+import { type GameTitle, getOrCreateImageCache, getUnresizedImageUrl } from './imgCache'
+import type { Config, History, PlayHistories } from '~/types'
+import { imageCoverCropping, imageUrl2Base64 } from '~/server/utils'
+import { JPEG_PREFIX, NS_LOGO_BASE64, PNG_PREFIX, SVG_ANIMATION_STYLE, SVG_CARD_FRAME_CSS_STYLE, SVG_PREFIX, test_frame1, test_frame2 } from '~/utils/constance'
+import { formatMin, getAvatarUrl, getCountryFlagSVGURL } from '~/utils/tools'
 
-export function renderCard(playData: PlayHistories, config: Config, nickname: string) {
-  let gameDataString = ''
-  let avatarString = ''
-  let totalTime = ''
-  async function _formatRecentGames() {
-    try {
-      const { formatedRecentData, totalMinString } = await formatRecentGames(playData)
+export function renderCard(playData: PlayHistories, config: Config) {
+  let recent_history: History[] = []
+  let avatar_base64 = ''
+  let cflag_base64 = ''
+  let card_bg_image_base64 = ''
+  let img_cache: Map<string, string> = new Map()
 
-      const games = Object.entries(formatedRecentData).slice(0, 5)
-      for (const [_key, value] of games) {
-        gameDataString += `
-      <div class="game-group">
-        <img class="game" height="75" width="75" src="${JPEG_PREFIX + value.image}" />
-        <div class="time">${value.playedTimeString}</div>
-      </div>
-      `
+  const gamesTotal = playData.playHistories.length
+  let playtimeTotal = 0
+  let gamesThisMonth = 0
+  let gamesThisYear = 0
+
+  async function handleImgCache() {
+    const gameTitles = recent_history.map((game) => {
+      return {
+        title_name: game.titleName,
+        image_url: game.imageUrl,
       }
+    })
 
-      totalTime = totalMinString
+    let card_bg_url = ''
+    if (gameTitles.length > 0) {
+      const firstGame = gameTitles[0]
+      card_bg_url = await getGameScreenshotURL(firstGame.title_name)
+      if (!card_bg_url) {
+        card_bg_url = getUnresizedImageUrl(firstGame.image_url)
+      }
+      const card_bg_index = {
+        title_name: firstGame.title_name,
+        image_url: card_bg_url,
+      }
+      gameTitles.push(card_bg_index)
     }
-    catch (error) {
-      throw new Error(String(error))
+
+    img_cache = await getOrCreateImageCache(gameTitles)
+
+    card_bg_image_base64 = await imageCoverCropping(
+      img_cache.get(card_bg_url),
+      622,
+      206,
+    )
+
+    avatar_base64 = await imageUrl2Base64(
+      getAvatarUrl(config.custom_avatar_url, config.nintendo_avatar_url),
+    )
+    cflag_base64 = await imageUrl2Base64(getCountryFlagSVGURL(config.country))
+  }
+
+  function handleStats() {
+    const now = new Date()
+    const thisMonth = dayjs(new Date(now.getFullYear(), now.getMonth(), 1))
+    const thisYear = dayjs(new Date(now.getFullYear(), 0, 1))
+
+    for (const game of playData.playHistories) {
+      playtimeTotal += game.totalPlayedMinutes
+      const lastPlayedAt = dayjs(game.lastPlayedAt)
+      if (lastPlayedAt.isAfter(thisMonth)) {
+        gamesThisMonth++
+      }
+      if (lastPlayedAt.isAfter(thisYear)) {
+        gamesThisYear++
+      }
     }
   }
 
-  async function formatHistoryGames() {
-    let games = playData.playHistories
-    games = games.sort((a, b) => b.totalPlayedMinutes - a.totalPlayedMinutes,
-    ).slice(0, 5)
-    let totalMin = 0
-    for (const game of games) {
-      const imgBase64 = await imageUrl2Base64(game.imageUrl)
-      totalMin += game.totalPlayedMinutes
+  async function prepare_data() {
+    recent_history = playData.playHistories.slice(0, 6)
+    await handleImgCache()
+    handleStats()
+  }
+
+  async function renderFrame1() {
+    return `
+        <div class="card card-bg" xmlns="http://www.w3.org/1999/xhtml">
+            <div class="user-header">
+                <img class="avatar" height="40" width="40"
+                    src="${JPEG_PREFIX + avatar_base64}" />
+                <div class="user-info">
+                    <div class="normal-row">
+                        <img height="30" width="30"
+                            src="${SVG_PREFIX + cflag_base64}" />
+                        <div class="name">${config.nickname}</div>
+                    </div>
+                    <div class="normal-row">
+                        <div class="name">${config.sw_friend_code}</div>
+                        <img height="30" width="30"
+                            src="${NS_LOGO_BASE64}" />
+                    </div>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value">${gamesTotal}</div>
+                    <div class="stat-key">Games</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${formatMin(playtimeTotal)}</div>
+                    <div class="stat-key">PlayTime</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${gamesThisMonth}</div>
+                    <div class="stat-key">GamesMonth</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">${gamesThisYear}</div>
+                    <div class="stat-key">GamesYear</div>
+                </div>
+            </div>
+        </div>
+    `
+  }
+
+  async function renderFrame2() {
+    let gameDataString = ''
+    for (const game of recent_history) {
+      const imgBase64 = img_cache.get(game.imageUrl)
+      const imgCropBase64 = await imageCoverCropping(imgBase64, 75, 75)
       gameDataString += `
       <div class="game-group">
-        <img class="game" height="75" width="75" src="${JPEG_PREFIX + imgBase64}" />
-        <div class="time">${formatMin(game.totalPlayedMinutes)}</div>
+        <img class="game" height="75" width="75" src="${PNG_PREFIX + imgCropBase64}" />
+        <div class="playtime">${formatMin(game.totalPlayedMinutes)}</div>
       </div>
       `
     }
-
-    totalTime = formatMin(totalMin)
+    return `
+    <div class="card card-bg" xmlns="http://www.w3.org/1999/xhtml">
+        <div class="user-header">
+            <img class="avatar" height="40" width="40"
+                src="${JPEG_PREFIX + avatar_base64}" />
+            <div class="user-info">
+                <div class="normal-row">
+                    <img height="30" width="30"
+                        src="${SVG_PREFIX + cflag_base64}" />
+                    <div class="name">${config.nickname}</div>
+                </div>
+                <div class="normal-row">
+                    <div class="name">🎮 ${gamesTotal}</div>
+                    <div class="name">⏰ ${formatMin(playtimeTotal)}</div>
+                    <img height="30" width="30"
+                        src="${NS_LOGO_BASE64}" />
+                </div>
+            </div>
+        </div>
+        <div class="games"> ${gameDataString} </div>
+    </div>
+    `
   }
-
-  async function setAvatar() {
-    try {
-      avatarString = await imageUrl2Base64(`${env.DOMAIN_ORIGIN}/avatar/${config.avatar}.jpg`)
-    }
-    catch (error) {
-      avatarString = ''
-    }
-  }
-
-  setAvatar()
 
   async function render() {
-    if (config.mode === 'recent')
-      await _formatRecentGames()
-    else
-      await formatHistoryGames()
+    await prepare_data()
+    const frame1 = await renderFrame1()
+    const frame2 = await renderFrame2()
 
     return `
-    <svg width="460" height="182" xmlns:xlink="http://www.w3.org/1999/xlink"
+    <svg width="622" height="206" xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns="http://www.w3.org/2000/svg">
-      <style>
-        .card {
-          height: 100%;
-          width: 100%;
-          box-sizing: border-box;
-          padding: 10px 16px;
-          background: #d32c27;
-          border-radius: 5px;
-          opacity: 0.8;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          color: #fff;
-        }
-
-        .avatar {
-          border-radius: 50%;
-        }
-
-        .name {
-          font-size: 20px;
-          font-weight: 500;
-        }
-
-        .game-group {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap:5px
-        }
-
-        .games {
-          display: flex;
-          gap: 10px;
-        }
-
-        .game {
-          border-radius: 10px;
-        }
-
-        .time {
-          font-size:12px;
-          font-style: italic;
+      <style type="text/css">
+        ${SVG_ANIMATION_STYLE}
+        ${SVG_CARD_FRAME_CSS_STYLE}
+        .card-bg {
+        background-image: url("${PNG_PREFIX + card_bg_image_base64}")
         }
       </style>
-      <foreignObject width="460" height="182">
-        <div class="card" xmlns="http://www.w3.org/1999/xhtml">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="display:flex;align-items:center;gap:10px">
-              <img height="30" width="30" class="avatar" src="${JPEG_PREFIX + avatarString}" />
-              <div class="name">${nickname}</div>
-            </div>
-            <img height="20" width="20" src="${NS_LOGO_BASE64}" />
-          </div>
-          <div style="font-size:12px">
-            ${config.mode === 'history' ? '历史游玩' : '最近一周游玩'}(${totalTime})
-          </div>
-
-          <div class="games">
-            ${gameDataString}
-          </div>
-        </div>
-      </foreignObject>
+      <foreignObject id="frame1" width="622" height="206"> ${frame1} </foreignObject>
+      <foreignObject id="frame2" width="622" height="206"> ${frame2} </foreignObject>
     </svg>
     `
   }
 
   return {
     render,
-    _formatRecentGames,
   }
 }

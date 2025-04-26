@@ -5,6 +5,9 @@ export interface Response<T> {
 }
 
 export interface Config {
-  mode: 'recent' | 'history'
-  avatar: string
+  nickname: string
+  custom_avatar_url: string
+  nintendo_avatar_url: string
+  country: string
+  sw_friend_code?: string
 }

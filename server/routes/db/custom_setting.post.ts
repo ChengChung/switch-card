@@ -4,9 +4,9 @@ import type { Database, Response } from '~/types'
 export default defineEventHandler(async (event): Promise<Response<null>> => {
   try {
     const body = await readBody(event)
-    const { userId, sessionToken, nickname, country, nintendo_avatar_url } = body
+    const { userId, custom_avatar_url, sw_friend_code } = body
     const db = createKysely<Database>()
-    if (!userId || !sessionToken)
+    if (!userId)
       throw new Error('messing params')
 
     const findOne = await db.selectFrom('switch_card_user')
@@ -16,24 +16,15 @@ export default defineEventHandler(async (event): Promise<Response<null>> => {
     if (findOne) {
       await db.updateTable('switch_card_user')
         .set({
-          session_token: sessionToken,
-          nickname,
-          country,
-          nintendo_avatar_url,
+          custom_avatar_url,
+          sw_friend_code,
           updated_time: new Date(),
         })
         .where('user_id', '=', userId)
         .executeTakeFirst()
     }
     else {
-      await db.insertInto('switch_card_user')
-        .values({
-          user_id: userId,
-          nickname,
-          session_token: sessionToken,
-          country,
-          nintendo_avatar_url,
-        }).execute()
+      throw new Error('找不到用户信息')
     }
 
     return {

@@ -1,45 +1,6 @@
 import { Buffer } from 'node:buffer'
 import { $fetch } from 'ofetch'
-import type { FormatedRecentData, History, PlayHistories } from '~/types'
-import { formatMin } from '~/utils/tools'
-
-export async function formatRecentGames(playHistories: PlayHistories) {
-  const formatedRecentData: FormatedRecentData = {}
-  let totalMin = 0
-  let totalMinString = ''
-
-  const recentData = playHistories.recentPlayHistories
-
-  let games: History[] = []
-
-  recentData.forEach((item) => {
-    games = games.concat(item.dailyPlayHistories)
-  })
-
-  for (let i = 0; i < games.length; i++) {
-    totalMin += games[i].totalPlayedMinutes
-    if (!Object.hasOwn(formatedRecentData, games[i].titleId)) {
-      formatedRecentData[games[i].titleId] = {
-        image: await imageUrl2Base64(games[i].imageUrl),
-        name: games[i].titleName,
-        playedMin: games[i].totalPlayedMinutes,
-      }
-    }
-    else {
-      formatedRecentData[games[i].titleId].playedMin += games[i].totalPlayedMinutes
-    }
-  }
-
-  for (const value of Object.values(formatedRecentData))
-    value.playedTimeString = formatMin(value.playedMin)
-
-  totalMinString = formatMin(totalMin)
-
-  return {
-    formatedRecentData,
-    totalMinString,
-  }
-}
+import sharp from 'sharp'
 
 export async function imageUrl2Base64(url: string): Promise<string> {
   try {
@@ -53,6 +14,29 @@ export async function imageUrl2Base64(url: string): Promise<string> {
     return ''
   }
   catch (error) {
+    console.error('imageUrl2Base64 error:', error)
+    return ''
+  }
+}
+
+export async function imageCoverCropping(image_base64: string | undefined, width: number, height: number) {
+  if (!image_base64)
+    return ''
+  try {
+    const image = Buffer.from(image_base64, 'base64')
+    const resizedBuffer = await sharp(image)
+      .resize(width, height, {
+        fit: 'cover',
+        position: 'center',
+      })
+      .toFormat('png')
+      .toBuffer()
+
+    const base64String = resizedBuffer.toString('base64')
+    return base64String
+  }
+  catch (error) {
+    console.error('cropping image error:', error)
     return ''
   }
 }
