@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
       },
     })
 
-    const playData = await $fetch<PlayHistories>('https://news-api.entry.nintendo.co.jp/api/v1.1/users/me/play_histories', {
+    const playData = await $fetch<PlayHistories>('https://news-api.entry.nintendo.co.jp/api/v1.2/users/me/play_histories', {
       headers: {
         'Authorization': `Bearer ${access_token}`,
         'User-Agent': UA,

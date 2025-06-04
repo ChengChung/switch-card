@@ -9,6 +9,7 @@ export interface History {
   titleName: string
   imageUrl: string
   titleId: string
+  platform: string
   totalPlayedDays?: number
   totalPlayedMinutes: number
   lastPlayedAt?: string
