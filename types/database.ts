@@ -36,6 +36,17 @@ interface JPStoreGameTitleTable {
   screenshot_img_url: string
 }
 
+interface JPStoreGameTitleSearchTable {
+  id: string
+  title: string
+  url: string
+  titlek: string
+  nsuid: string
+  hard: string
+  iurl: string
+  siurl: string
+}
+
 interface GameTitleImgCacheTable {
   id: Generated<number>
   title_name: string
@@ -47,5 +58,6 @@ export interface Database {
   switch_card_user: SwitchCardUserTable
   switch_card_cache: SwitchCardCacheTable
   jp_store_game_title: JPStoreGameTitleTable
+  jp_store_game_title_search: JPStoreGameTitleSearchTable
   game_title_img_cache: GameTitleImgCacheTable
 }

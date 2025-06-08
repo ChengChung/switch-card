@@ -28,7 +28,7 @@ const tabs = [
   },
 ]
 
-const { getUserInfo, withRefreshAccessToken, getPlayHistory, getCustomInfo, saveCustomInfo, refreshJPStoreGameTitle } = useInfoStore()
+const { getUserInfo, withRefreshAccessToken, getPlayHistory, getCustomInfo, saveCustomInfo, refreshJPStoreGameTitle, refreshJPStoreGameTitle2 } = useInfoStore()
 const { userInfo, playHistories, userCustomInfo, loading } = storeToRefs(useInfoStore())
 const { logout } = useAuthStore()
 
@@ -166,6 +166,12 @@ function sortGames() {
     }
   }
 }
+async function updatenNSviaSearch() {
+  await refreshJPStoreGameTitle2('ns')
+}
+async function updatenNS2viaSearch() {
+  await refreshJPStoreGameTitle2('ns2')
+}
 </script>
 
 <template>
@@ -217,10 +223,8 @@ function sortGames() {
           <div mr-3 flex-1>
             <ASelect v-model="orderWay" :options="orderOptions" @update:model-value="sortGames" />
           </div>
-          <i
-            :class="sortWay === 'descending' ? 'i-mdi:sort-descending' : 'i-mdi:sort-ascending'" w-4 flex-shrink-0
-            cursor-pointer font-bold text-primary @click="handlesortWayClick"
-          />
+          <i :class="sortWay === 'descending' ? 'i-mdi:sort-descending' : 'i-mdi:sort-ascending'" w-4 flex-shrink-0
+            cursor-pointer font-bold text-primary @click="handlesortWayClick" />
         </div>
         <div flex="~ wrap" mt-4 justify-between gap-4>
           <div v-for="game in playHistories?.playHistories" :key="game.titleId">
@@ -253,10 +257,8 @@ function sortGames() {
           </ACard>
         </div>
         <div flex="~ col" gap-3>
-          <div
-            v-for="(item, index) in referenceList" :key="index" bg="gray-200" dark="bg-gray-800" relative
-            cursor-pointer rounded-xl px-4 pb-4 pt-8 opacity-50 @click="handleCopy(item.text)"
-          >
+          <div v-for="(item, index) in referenceList" :key="index" bg="gray-200" dark="bg-gray-800" relative
+            cursor-pointer rounded-xl px-4 pb-4 pt-8 opacity-50 @click="handleCopy(item.text)">
             <div absolute right-2 top-2 text-sm>
               {{ item.type }}
             </div>
@@ -285,10 +287,8 @@ function sortGames() {
             保存
           </ABtn>
           <div text-sm>
-            ⚠️：和Switch用户相同的用户头像可以在<a
-              href="https://accounts.nintendo.com/links_info" target="_blank"
-              color="blue"
-            >这里</a>找到，但它不会实时更新
+            ⚠️：和Switch用户相同的用户头像可以在<a href="https://accounts.nintendo.com/links_info" target="_blank"
+              color="blue">这里</a>找到，但它不会实时更新
           </div>
         </div>
       </template>
@@ -300,6 +300,18 @@ function sortGames() {
               JP商店游戏列表数据更新
             </div>
             <ABtn icon-only text-sm variant="text" icon="i-bx-refresh" @click="refreshJPStoreGameTitle" />
+          </div>
+          <div flex gap-3 items-center>
+            <div>
+              JP商店NS游戏列表数据更新（搜索API）
+            </div>
+            <ABtn icon-only text-sm variant="text" icon="i-bx-refresh" @click="updatenNSviaSearch" />
+          </div>
+          <div flex gap-3 items-center>
+            <div>
+              JP商店NS2游戏列表数据更新（搜索API）
+            </div>
+            <ABtn icon-only text-sm variant="text" icon="i-bx-refresh" @click="updatenNS2viaSearch" />
           </div>
         </div>
       </template>
